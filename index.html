@@ -80,6 +80,30 @@
                     { en: 'August', zh: '八月', pronunciation: '奧-葛-死特', sentence: 'August is hot. (八月很熱)' },
                     { en: 'December', zh: '十二月', pronunciation: '低-森-柏', sentence: 'Christmas is in December. (聖誕節在十二月)' },
                 ]
+            },
+            {
+                id: 'weather_1',
+                title: '第五關：天氣',
+                words: [
+                    { en: 'Sunny', zh: '晴天', pronunciation: '桑-泥', sentence: 'It is sunny today. (今天是晴天)' },
+                    { en: 'Rainy', zh: '雨天', pronunciation: '瑞-泥', sentence: 'It is rainy outside. (外面在下雨)' },
+                    { en: 'Cloudy', zh: '陰天/多雲', pronunciation: '克勞-底', sentence: 'It looks cloudy. (看起來多雲)' },
+                    { en: 'Windy', zh: '颳風', pronunciation: '溫-底', sentence: 'It is very windy. (風很大)' },
+                    { en: 'Hot', zh: '熱', pronunciation: '哈-特', sentence: 'The tea is hot. (茶很燙/熱)' },
+                    { en: 'Cold', zh: '冷', pronunciation: '寇-得', sentence: 'Winter is cold. (冬天很冷)' },
+                ]
+            },
+            {
+                id: 'numbers_2',
+                title: '第六關：進階數字',
+                words: [
+                    { en: 'Hundred', zh: '百 (100)', pronunciation: '杭-爵-得', sentence: 'One hundred. (一百)' },
+                    { en: 'Thousand', zh: '千 (1,000)', pronunciation: '騷-忍-得', sentence: 'One thousand. (一千)' },
+                    { en: 'Ten Thousand', zh: '萬 (10,000)', pronunciation: '天-騷-忍-得', sentence: 'Ten thousand. (一萬)' },
+                    { en: '263', zh: '263', pronunciation: '兔-杭-爵-六-踢-歲', sentence: 'Two hundred sixty-three. (二百六十三)' },
+                    { en: '520', zh: '520', pronunciation: '法夫-杭-爵-團-踢', sentence: 'Five hundred twenty. (五百二十)' },
+                    { en: '21,345', zh: '21,345', pronunciation: '團-踢-萬 騷-忍-得...', sentence: 'Twenty-one thousand three hundred forty-five. (二萬一千三百四十五)' },
+                ]
             }
         ];
 
@@ -108,6 +132,7 @@
             const [userProgress, setUserProgress] = useState({}); 
             const [quizOptions, setQuizOptions] = useState([]);
             const [quizFeedback, setQuizFeedback] = useState(null);
+            const [speechRate, setSpeechRate] = useState(0.6); // 預設60%
             
             // 語音識別相關 State
             const [isListening, setIsListening] = useState(false);
@@ -144,13 +169,19 @@
                         const { activeWords, currentIndex } = stateRef.current;
                         if (activeWords && activeWords.length > currentIndex) {
                              const currentWord = activeWords[currentIndex];
+                             
+                             // 數字特殊處理：將文字轉數字進行比對
                              const target = currentWord.en.toLowerCase();
+                             const targetNum = target.replace(/,/g, ''); // 移除逗號
                              const spoken = transcript.toLowerCase();
-
-                             // 寬鬆比對
-                             if (spoken.includes(target) || target.includes(spoken)) {
+                             
+                             // 寬鬆比對：包含文字、包含數字形式、或完全相等
+                             if (spoken.includes(target) || 
+                                 target.includes(spoken) || 
+                                 spoken.includes(targetNum) || 
+                                 spoken.replace(/,/g, '') === targetNum) {
                                  setSpeakFeedback('match');
-                                 speak('Great job!');
+                                 speak(currentWord.en); // 答對時播放一次正確讀音
                              } else {
                                  setSpeakFeedback('no-match');
                                  speak('Try again');
@@ -206,12 +237,23 @@
                 localStorage.setItem('englishAppProgress', JSON.stringify(newProgress));
             };
 
-            const speak = (text, rate = 0.8) => {
+            const speak = (text) => {
                 window.speechSynthesis.cancel();
+                // 處理例句中的括號內容
                 const englishText = text.replace(/\(.*\)/, ''); 
+                
+                // 針對長數字，如果語速已經很慢(<=0.6)就維持原速，否則稍微放慢到0.7
+                // 但使用者如果選了0.3，我們就用0.3，不應該變快
+                const isLongNumber = /\d{3,}/.test(englishText);
+                let rateToUse = speechRate;
+                if (isLongNumber && speechRate > 0.7) {
+                    rateToUse = 0.7;
+                }
+
                 const utterance = new SpeechSynthesisUtterance(englishText);
                 utterance.lang = 'en-US';
-                utterance.rate = rate; 
+                // 使用目前設定的速度
+                utterance.rate = rateToUse;
                 window.speechSynthesis.speak(utterance);
             };
 
@@ -395,8 +437,17 @@
                         {/* Content: 可滑動區域，但按鈕不包含在內 */}
                         <div className="flex-1 flex flex-col items-center p-4 text-center overflow-y-auto scrollbar-hide">
                             <div className="bg-white w-full rounded-3xl shadow-lg p-5 mb-4 border-b-4 border-blue-200">
-                                <h2 className="text-5xl font-bold text-slate-800 mb-2 tracking-wide">{currentWord.en}</h2>
+                                {/* 字體大小動態調整：如果字太長，稍微縮小 */}
+                                <h2 className={`${currentWord.en.length > 10 ? 'text-4xl' : 'text-5xl'} font-bold text-slate-800 mb-2 tracking-wide break-words`}>{currentWord.en}</h2>
                                 <div className="text-2xl text-orange-600 font-bold mb-4">{currentWord.zh}</div>
+                                
+                                {/* 語速控制按鈕 */}
+                                <div className="flex justify-center gap-2 mb-4">
+                                    <button onClick={() => setSpeechRate(1.0)} className={`px-3 py-1 rounded-full text-sm font-bold border-2 transition-colors ${speechRate === 1.0 ? 'bg-blue-500 text-white border-blue-500' : 'bg-white text-gray-400 border-gray-200'}`}>正常 (100%)</button>
+                                    <button onClick={() => setSpeechRate(0.6)} className={`px-3 py-1 rounded-full text-sm font-bold border-2 transition-colors ${speechRate === 0.6 ? 'bg-blue-500 text-white border-blue-500' : 'bg-white text-gray-400 border-gray-200'}`}>慢速 (60%)</button>
+                                    <button onClick={() => setSpeechRate(0.3)} className={`px-3 py-1 rounded-full text-sm font-bold border-2 transition-colors ${speechRate === 0.3 ? 'bg-blue-500 text-white border-blue-500' : 'bg-white text-gray-400 border-gray-200'}`}>超慢 (30%)</button>
+                                </div>
+
                                 <div className="bg-gray-100 inline-block px-4 py-2 rounded-full text-lg text-gray-600 mb-6">發音像：{currentWord.pronunciation}</div>
                                 
                                 <button onClick={() => speak(currentWord.en)} className="bg-blue-500 text-white w-full rounded-xl p-3 shadow-md mb-4 active:scale-95 transition-transform flex items-center justify-center gap-2">
@@ -470,7 +521,7 @@
                                 {quizFeedback === 'incorrect' && (
                                     <div className="absolute inset-0 bg-red-100 flex items-center justify-center z-10"><div className="text-red-500 font-bold text-4xl flex flex-col items-center"><Icon name="x" size={64} /><div>再試一次</div></div></div>
                                 )}
-                                <div className="text-5xl font-bold text-slate-800 mb-4">{currentWord.en}</div>
+                                <div className={`${currentWord.en.length > 10 ? 'text-4xl' : 'text-5xl'} font-bold text-slate-800 mb-4 break-words`}>{currentWord.en}</div>
                                 <button onClick={() => speak(currentWord.en)} className="text-blue-500 mx-auto block p-2"><Icon name="volume" size={32} /></button>
                             </div>
                             <div className="w-full space-y-4 pb-4">
