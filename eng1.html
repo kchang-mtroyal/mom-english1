@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>樂齡英語小學堂</title>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap');
+        body { font-family: 'Noto Sans TC', sans-serif; touch-action: manipulation; }
+        .btn-press:active { transform: scale(0.95); }
+        .pulse-animation { animation: pulse 1.5s infinite; }
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { box-shadow: 0 0 0 15px rgba(239, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-900">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // --- 資料庫 (課程內容) ---
+        const curriculum = [
+            {
+                id: 'numbers_1',
+                title: '第一關：基本數字',
+                words: [
+                    { en: 'One', zh: '一', pronunciation: '萬', sentence: 'I have one apple. (我有一顆蘋果)' },
+                    { en: 'Two', zh: '二', pronunciation: '兔', sentence: 'Two cats. (兩隻貓)' },
+                    { en: 'Three', zh: '三', pronunciation: '歲', sentence: 'Three o\'clock. (三點鐘)' },
+                    { en: 'Four', zh: '四', pronunciation: '佛', sentence: 'Four seasons. (四季)' },
+                    { en: 'Five', zh: '五', pronunciation: '法夫', sentence: 'High five! (擊掌!)' },
+                    { en: 'Ten', zh: '十', pronunciation: '天', sentence: 'Count to ten. (數到十)' },
+                ]
+            },
+            {
+                id: 'week_1',
+                title: '第二關：星期',
+                words: [
+                    { en: 'Monday', zh: '星期一', pronunciation: '曼-day', sentence: 'Today is Monday. (今天是星期一)' },
+                    { en: 'Tuesday', zh: '星期二', pronunciation: '吐-死-day', sentence: 'See you Tuesday. (星期二見)' },
+                    { en: 'Wednesday', zh: '星期三', pronunciation: '溫-死-day', sentence: 'Wednesday is middle of the week. (週三是週中)' },
+                    { en: 'Friday', zh: '星期五', pronunciation: '福來-day', sentence: 'Happy Friday! (快樂星期五!)' },
+                    { en: 'Sunday', zh: '星期日', pronunciation: '珊-day', sentence: 'Sunday is a holiday. (週日是假日)' },
+                ]
+            },
+            {
+                id: 'time_1',
+                title: '第三關：時間與日期',
+                words: [
+                    { en: 'Morning', zh: '早上', pronunciation: '摩-寧', sentence: 'Good morning. (早安)' },
+                    { en: 'Night', zh: '晚上', pronunciation: '奈-特', sentence: 'Good night. (晚安)' },
+                    { en: 'Today', zh: '今天', pronunciation: '土-day', sentence: 'How are you today? (你今天好嗎?)' },
+                    { en: 'Tomorrow', zh: '明天', pronunciation: '土-摩-柔', sentence: 'See you tomorrow. (明天見)' },
+                    { en: 'Year', zh: '年', pronunciation: '一-爾', sentence: 'Happy New Year! (新年快樂!)' },
+                ]
+            },
+             {
+                id: 'months_1',
+                title: '第四關：月份精選',
+                words: [
+                    { en: 'January', zh: '一月', pronunciation: '間-牛-爾瑞', sentence: 'January is cold. (一月很冷)' },
+                    { en: 'May', zh: '五月', pronunciation: '梅', sentence: 'May is spring. (五月是春天)' },
+                    { en: 'August', zh: '八月', pronunciation: '奧-葛-死特', sentence: 'August is hot. (八月很熱)' },
+                    { en: 'December', zh: '十二月', pronunciation: '低-森-柏', sentence: 'Christmas is in December. (聖誕節在十二月)' },
+                ]
+            }
+        ];
+
+        // --- 組件：圖標 ---
+        const Icon = ({ name, size = 24, className }) => {
+            const icons = {
+                volume: <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></svg>,
+                star: <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>,
+                arrowRight: <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>,
+                home: <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>,
+                refresh: <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M23 4v6h-6"></path><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>,
+                check: <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polyline points="20 6 9 17 4 12"></polyline></svg>,
+                x: <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>,
+                mic: <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+            };
+            return icons[name] || null;
+        };
+
+        // --- 主程式 ---
+        const App = () => {
+            const [screen, setScreen] = useState('home'); 
+            const [currentLevelId, setCurrentLevelId] = useState(null);
+            const [activeWords, setActiveWords] = useState([]); 
+            const [currentIndex, setCurrentIndex] = useState(0);
+            const [score, setScore] = useState(0);
+            const [userProgress, setUserProgress] = useState({}); 
+            const [quizOptions, setQuizOptions] = useState([]);
+            const [quizFeedback, setQuizFeedback] = useState(null);
+            
+            // 語音識別相關 State
+            const [isListening, setIsListening] = useState(false);
+            const [speakFeedback, setSpeakFeedback] = useState(null); 
+            const [recognizedText, setRecognizedText] = useState('');
+            const recognitionRef = useRef(null);
+
+            // Ref 用於解決語音識別 callback 中的閉包問題
+            const stateRef = useRef({ activeWords: [], currentIndex: 0 });
+
+            useEffect(() => {
+                stateRef.current = { activeWords, currentIndex };
+            }, [activeWords, currentIndex]);
+
+            // 初始化語音識別
+            useEffect(() => {
+                if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+                    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                    recognitionRef.current = new SpeechRecognition();
+                    recognitionRef.current.continuous = false;
+                    recognitionRef.current.lang = 'en-US';
+                    recognitionRef.current.interimResults = false;
+
+                    // 確保狀態同步：當瀏覽器真正開始錄音時，才將 isListening 設為 true
+                    recognitionRef.current.onstart = () => {
+                        setIsListening(true);
+                    };
+
+                    recognitionRef.current.onresult = (event) => {
+                        const transcript = event.results[0][0].transcript;
+                        setRecognizedText(transcript);
+                        
+                        // 使用 ref 獲取最新的資料
+                        const { activeWords, currentIndex } = stateRef.current;
+                        if (activeWords && activeWords.length > currentIndex) {
+                             const currentWord = activeWords[currentIndex];
+                             const target = currentWord.en.toLowerCase();
+                             const spoken = transcript.toLowerCase();
+
+                             // 寬鬆比對
+                             if (spoken.includes(target) || target.includes(spoken)) {
+                                 setSpeakFeedback('match');
+                                 speak('Great job!');
+                             } else {
+                                 setSpeakFeedback('no-match');
+                                 speak('Try again');
+                             }
+                        }
+                        setIsListening(false);
+                    };
+
+                    recognitionRef.current.onerror = (event) => {
+                        console.error('Speech recognition error', event.error);
+                        setIsListening(false);
+                        // 忽略 'no-speech' 錯誤，這只是代表沒有聽到聲音
+                        if (event.error !== 'no-speech') {
+                            setSpeakFeedback('error');
+                        }
+                    };
+
+                    recognitionRef.current.onend = () => {
+                        setIsListening(false);
+                    };
+                }
+
+                // Cleanup: 當組件卸載時，確保停止語音識別
+                return () => {
+                    if (recognitionRef.current) {
+                        try {
+                            recognitionRef.current.abort();
+                        } catch (e) {
+                            console.log('Cleanup error', e);
+                        }
+                    }
+                };
+            }, []);
+
+            // 初始化與讀取進度
+            useEffect(() => {
+                const savedProgress = localStorage.getItem('englishAppProgress');
+                if (savedProgress) {
+                    setUserProgress(JSON.parse(savedProgress));
+                }
+            }, []);
+
+            // 儲存進度
+            const updateProgress = (word, isCorrect) => {
+                const newProgress = { ...userProgress };
+                const currentScore = newProgress[word] || 0;
+                if (isCorrect) {
+                    newProgress[word] = Math.min(currentScore + 1, 5); 
+                } else {
+                    newProgress[word] = Math.max(currentScore - 1, 0);
+                }
+                setUserProgress(newProgress);
+                localStorage.setItem('englishAppProgress', JSON.stringify(newProgress));
+            };
+
+            const speak = (text, rate = 0.8) => {
+                window.speechSynthesis.cancel();
+                const englishText = text.replace(/\(.*\)/, ''); 
+                const utterance = new SpeechSynthesisUtterance(englishText);
+                utterance.lang = 'en-US';
+                utterance.rate = rate; 
+                window.speechSynthesis.speak(utterance);
+            };
+
+            const startListening = () => {
+                if (!recognitionRef.current) {
+                    alert("抱歉，您的手機瀏覽器不支援語音辨識功能。");
+                    return;
+                }
+
+                // 如果已經在聽，則停止
+                if (isListening) {
+                    recognitionRef.current.stop();
+                    return;
+                }
+
+                setSpeakFeedback(null);
+                setRecognizedText('');
+                // 這裡暫時先將狀態設為 true 以提供即時回饋，如果失敗會在 catch 中復原
+                setIsListening(true);
+                
+                try {
+                    recognitionRef.current.start();
+                } catch (e) {
+                    console.error("Mic start failed:", e);
+                    // 關鍵修正：處理 InvalidStateError (already started)
+                    // 如果瀏覽器說已經開始了，我們強制重置狀態，讓使用者可以重新點擊
+                    if (e.name === 'InvalidStateError' || e.message.includes('already started')) {
+                        try {
+                            recognitionRef.current.stop();
+                        } catch (err) {}
+                        setIsListening(false); // 重置為未錄音狀態
+                    } else {
+                        setIsListening(false);
+                    }
+                }
+            };
+
+            const currentWord = activeWords[currentIndex];
+
+            const startLevel = (levelId) => {
+                const level = curriculum.find(c => c.id === levelId);
+                if (level) {
+                    setActiveWords(level.words);
+                    setCurrentLevelId(levelId);
+                    setCurrentIndex(0);
+                    setSpeakFeedback(null);
+                    setScreen('learn');
+                }
+            };
+
+            const startReview = () => {
+                const allWords = curriculum.flatMap(c => c.words);
+                const weakWords = allWords.filter(w => (userProgress[w.en] || 0) < 3);
+                const reviewWords = weakWords.length > 0 ? weakWords.slice(0, 10) : allWords.sort(() => 0.5 - Math.random()).slice(0, 10);
+                
+                setActiveWords(reviewWords);
+                setCurrentLevelId(null);
+                setCurrentIndex(0);
+                setSpeakFeedback(null);
+                setScreen('learn');
+            };
+
+            const generateQuizOptions = (correctWord) => {
+                const allWords = curriculum.flatMap(c => c.words);
+                const distractors = allWords.filter(w => w.en !== correctWord.en);
+                const shuffledDistractors = distractors.sort(() => 0.5 - Math.random()).slice(0, 2);
+                const options = [correctWord, ...shuffledDistractors].sort(() => 0.5 - Math.random());
+                setQuizOptions(options);
+            };
+
+            const handleQuizAnswer = (selectedWord) => {
+                const isCorrect = selectedWord.en === currentWord.en;
+                if (isCorrect) {
+                    setQuizFeedback('correct');
+                    speak('Good job!');
+                    setScore(score + 10);
+                    updateProgress(currentWord.en, true);
+                    setTimeout(() => {
+                        setQuizFeedback(null);
+                        nextCard();
+                    }, 1500);
+                } else {
+                    setQuizFeedback('incorrect');
+                    speak('Try again');
+                    updateProgress(currentWord.en, false);
+                    setTimeout(() => {
+                        setQuizFeedback(null);
+                    }, 1000);
+                }
+            };
+
+            const nextCard = () => {
+                setSpeakFeedback(null); 
+                setRecognizedText('');
+                if (currentIndex < activeWords.length - 1) {
+                    const nextIndex = currentIndex + 1;
+                    setCurrentIndex(nextIndex);
+                    if (screen === 'quiz') {
+                        generateQuizOptions(activeWords[nextIndex]);
+                    }
+                } else {
+                    setScreen('result');
+                    speak('Congratulations! You finished!');
+                }
+            };
+
+            const prevCard = () => {
+                setSpeakFeedback(null);
+                setRecognizedText('');
+                if (currentIndex > 0) {
+                    const prevIndex = currentIndex - 1;
+                    setCurrentIndex(prevIndex);
+                    if (screen === 'quiz') {
+                        generateQuizOptions(activeWords[prevIndex]);
+                    }
+                }
+            };
+
+            const startQuizMode = () => {
+                setCurrentIndex(0);
+                setScore(0);
+                setScreen('quiz');
+                if (activeWords.length > 0) {
+                    generateQuizOptions(activeWords[0]);
+                }
+            };
+
+            // --- 畫面渲染 ---
+
+            if (screen === 'home') {
+                return (
+                    <div className="min-h-screen bg-orange-50 flex flex-col p-4 max-w-md mx-auto shadow-xl">
+                        <header className="py-8 text-center">
+                            <h1 className="text-4xl font-bold text-orange-600 mb-2">樂齡英語</h1>
+                            <p className="text-xl text-gray-600">每天一點點，大腦更靈活</p>
+                        </header>
+                        <div className="flex-1 space-y-4">
+                            <button onClick={startReview} className="w-full bg-green-500 hover:bg-green-600 text-white rounded-2xl p-6 shadow-md transition-all btn-press flex items-center justify-between">
+                                <div className="flex items-center">
+                                    <Icon name="refresh" className="mr-4" size={32} />
+                                    <div className="text-left">
+                                        <div className="text-2xl font-bold">複習弱項</div>
+                                        <div className="text-sm opacity-90">加強不熟的單字</div>
+                                    </div>
+                                </div>
+                                <Icon name="arrowRight" />
+                            </button>
+                            <div className="text-xl font-bold text-gray-700 mt-6 mb-2 px-2">選擇課程：</div>
+                            {curriculum.map(level => (
+                                <button key={level.id} onClick={() => startLevel(level.id)} className="w-full bg-white hover:bg-orange-100 border-2 border-orange-200 text-gray-800 rounded-2xl p-5 shadow-sm transition-all btn-press flex items-center justify-between mb-3">
+                                    <div className="flex items-center">
+                                        <div className="bg-orange-100 p-2 rounded-full mr-4 text-orange-600 font-bold">{level.words.length}字</div>
+                                        <div className="text-left text-xl font-bold">{level.title}</div>
+                                    </div>
+                                    <Icon name="arrowRight" className="text-gray-400" />
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                );
+            }
+
+            // 安全檢查：如果在非首頁狀態下沒有單字，則返回 null 或回到首頁
+            if (!currentWord && screen !== 'home' && screen !== 'result') {
+                 // 這裡可以做一個簡單的錯誤處理，或者直接回首頁
+                 setTimeout(() => setScreen('home'), 0);
+                 return null;
+            }
+
+            if (screen === 'learn') {
+                return (
+                    <div className="min-h-screen bg-blue-50 flex flex-col max-w-md mx-auto shadow-xl relative">
+                        <div className="flex justify-between items-center p-4 bg-white shadow-sm">
+                            <button onClick={() => setScreen('home')} className="text-gray-600 p-2"><Icon name="home" /></button>
+                            <span className="text-xl font-bold text-blue-600">學習中 ({currentIndex + 1}/{activeWords.length})</span>
+                            <div className="w-8"></div>
+                        </div>
+
+                        <div className="flex-1 flex flex-col items-center p-4 text-center overflow-y-auto">
+                            <div className="bg-white w-full rounded-3xl shadow-lg p-6 mb-4 border-b-4 border-blue-200">
+                                <h2 className="text-5xl font-bold text-slate-800 mb-2 tracking-wide">{currentWord.en}</h2>
+                                <div className="text-2xl text-orange-600 font-bold mb-4">{currentWord.zh}</div>
+                                <div className="bg-gray-100 inline-block px-4 py-2 rounded-full text-lg text-gray-600 mb-6">發音像：{currentWord.pronunciation}</div>
+                                
+                                <button onClick={() => speak(currentWord.en)} className="bg-blue-500 text-white w-full rounded-xl p-3 shadow-md mb-4 active:scale-95 transition-transform flex items-center justify-center gap-2">
+                                    <Icon name="volume" size={24} />
+                                    <span className="text-xl font-bold">聽單字</span>
+                                </button>
+
+                                <div className="border-t pt-4">
+                                    <p className="text-lg text-gray-500 mb-1">例句：</p>
+                                    <div className="flex items-center justify-center gap-2">
+                                        <p className="text-lg text-slate-700 font-medium text-left flex-1">{currentWord.sentence}</p>
+                                        <button onClick={() => speak(currentWord.sentence)} className="bg-blue-100 text-blue-600 p-3 rounded-full hover:bg-blue-200">
+                                            <Icon name="volume" size={20} />
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="w-full bg-indigo-50 rounded-2xl p-4 border-2 border-indigo-100 mb-4">
+                                <div className="text-lg font-bold text-indigo-800 mb-2">口說練習</div>
+                                <div className="flex flex-col items-center">
+                                    <button 
+                                        onClick={startListening}
+                                        disabled={isListening}
+                                        className={`w-20 h-20 rounded-full flex items-center justify-center shadow-lg transition-all ${isListening ? 'bg-red-500 pulse-animation' : 'bg-white border-4 border-indigo-200 text-indigo-500'}`}
+                                    >
+                                        <Icon name="mic" size={40} className={isListening ? 'text-white' : ''} />
+                                    </button>
+                                    <div className="mt-2 h-8">
+                                        {isListening && <span className="text-red-500 font-bold animate-pulse">請大聲唸出來...</span>}
+                                        {!isListening && !speakFeedback && <span className="text-gray-400 text-sm">點擊麥克風開始錄音</span>}
+                                        {!isListening && speakFeedback === 'match' && <span className="text-green-600 font-bold text-lg">太棒了！唸對了！🎉</span>}
+                                        {!isListening && speakFeedback === 'no-match' && (
+                                            <div className="text-orange-500 font-bold">
+                                                <span>再試一次喔！</span>
+                                                <div className="text-xs text-gray-400 font-normal">聽到：{recognizedText}</div>
+                                            </div>
+                                        )}
+                                        {!isListening && speakFeedback === 'error' && <span className="text-red-400 text-sm">無法使用麥克風</span>}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="p-4 bg-white flex justify-between gap-4">
+                            <button onClick={prevCard} disabled={currentIndex === 0} className={`flex-1 py-4 rounded-xl text-xl font-bold ${currentIndex === 0 ? 'bg-gray-100 text-gray-300' : 'bg-gray-200 text-gray-700'}`}>上一個</button>
+                            {currentIndex === activeWords.length - 1 ? (
+                                <button onClick={startQuizMode} className="flex-1 bg-orange-500 text-white py-4 rounded-xl text-xl font-bold shadow-md btn-press">開始測驗</button>
+                            ) : (
+                                <button onClick={nextCard} className="flex-1 bg-blue-600 text-white py-4 rounded-xl text-xl font-bold shadow-md btn-press">下一個</button>
+                            )}
+                        </div>
+                    </div>
+                );
+            }
+
+            if (screen === 'quiz') {
+                return (
+                    <div className="min-h-screen bg-indigo-50 flex flex-col max-w-md mx-auto shadow-xl">
+                        <div className="p-4 text-center">
+                            <div className="text-2xl font-bold text-indigo-800">小測驗</div>
+                            <div className="text-gray-500">選出正確的中文意思</div>
+                        </div>
+                        <div className="flex-1 flex flex-col items-center p-6">
+                            <div className="bg-white w-full rounded-2xl shadow-md p-8 mb-8 text-center relative overflow-hidden">
+                                {quizFeedback === 'correct' && (
+                                    <div className="absolute inset-0 bg-green-100 flex items-center justify-center z-10"><div className="text-green-600 font-bold text-4xl flex flex-col items-center"><Icon name="check" size={64} /><div>答對了！</div></div></div>
+                                )}
+                                {quizFeedback === 'incorrect' && (
+                                    <div className="absolute inset-0 bg-red-100 flex items-center justify-center z-10"><div className="text-red-500 font-bold text-4xl flex flex-col items-center"><Icon name="x" size={64} /><div>再試一次</div></div></div>
+                                )}
+                                <div className="text-5xl font-bold text-slate-800 mb-4">{currentWord.en}</div>
+                                <button onClick={() => speak(currentWord.en)} className="text-blue-500 mx-auto block p-2"><Icon name="volume" size={32} /></button>
+                            </div>
+                            <div className="w-full space-y-4">
+                                {quizOptions.map((option, idx) => (
+                                    <button key={idx} onClick={() => handleQuizAnswer(option)} className="w-full bg-white hover:bg-indigo-100 border-2 border-indigo-100 rounded-xl p-6 text-2xl font-bold text-slate-700 shadow-sm btn-press transition-colors">{option.zh}</button>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            if (screen === 'result') {
+                return (
+                    <div className="min-h-screen bg-yellow-50 flex flex-col items-center justify-center max-w-md mx-auto p-6 text-center">
+                        <div className="bg-white p-8 rounded-3xl shadow-xl w-full">
+                            <div className="text-yellow-500 flex justify-center mb-4"><Icon name="star" size={80} className="fill-current" /></div>
+                            <h2 className="text-4xl font-bold text-slate-800 mb-4">恭喜完成！</h2>
+                            <p className="text-xl text-gray-600 mb-8">今天的大腦運動做得很棒喔！</p>
+                            <div className="space-y-4">
+                                <button onClick={() => setScreen('home')} className="w-full bg-orange-500 text-white text-2xl font-bold py-4 rounded-xl shadow-md btn-press">回首頁</button>
+                                <button onClick={() => startLevel(currentLevelId || curriculum[0].id)} className="w-full bg-white border-2 border-orange-200 text-orange-600 text-xl font-bold py-4 rounded-xl btn-press">再練習一次</button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+            return null;
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
