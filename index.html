@@ -11,9 +11,17 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap');
-        body { font-family: 'Noto Sans TC', sans-serif; touch-action: manipulation; }
+        body { font-family: 'Noto Sans TC', sans-serif; touch-action: manipulation; overscroll-behavior: none; }
         .btn-press:active { transform: scale(0.95); }
         .pulse-animation { animation: pulse 1.5s infinite; }
+        /* 隱藏捲軸但保留功能 */
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+        .scrollbar-hide {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
         @keyframes pulse {
             0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
             70% { box-shadow: 0 0 0 15px rgba(239, 68, 68, 0); }
@@ -335,12 +343,13 @@
 
             if (screen === 'home') {
                 return (
-                    <div className="min-h-screen bg-orange-50 flex flex-col p-4 max-w-md mx-auto shadow-xl">
-                        <header className="py-8 text-center">
+                    // 修改：使用 h-[100dvh] 與 flex-col overflow-hidden 確保不會跑版
+                    <div className="h-[100dvh] w-full bg-orange-50 flex flex-col p-4 max-w-md mx-auto shadow-xl overflow-hidden">
+                        <header className="py-4 shrink-0 text-center">
                             <h1 className="text-4xl font-bold text-orange-600 mb-2">樂齡英語</h1>
                             <p className="text-xl text-gray-600">每天一點點，大腦更靈活</p>
                         </header>
-                        <div className="flex-1 space-y-4">
+                        <div className="flex-1 space-y-4 overflow-y-auto pb-4 scrollbar-hide">
                             <button onClick={startReview} className="w-full bg-green-500 hover:bg-green-600 text-white rounded-2xl p-6 shadow-md transition-all btn-press flex items-center justify-between">
                                 <div className="flex items-center">
                                     <Icon name="refresh" className="mr-4" size={32} />
@@ -351,7 +360,7 @@
                                 </div>
                                 <Icon name="arrowRight" />
                             </button>
-                            <div className="text-xl font-bold text-gray-700 mt-6 mb-2 px-2">選擇課程：</div>
+                            <div className="text-xl font-bold text-gray-700 mt-4 mb-2 px-2">選擇課程：</div>
                             {curriculum.map(level => (
                                 <button key={level.id} onClick={() => startLevel(level.id)} className="w-full bg-white hover:bg-orange-100 border-2 border-orange-200 text-gray-800 rounded-2xl p-5 shadow-sm transition-all btn-press flex items-center justify-between mb-3">
                                     <div className="flex items-center">
@@ -366,24 +375,26 @@
                 );
             }
 
-            // 安全檢查：如果在非首頁狀態下沒有單字，則返回 null 或回到首頁
+            // 安全檢查
             if (!currentWord && screen !== 'home' && screen !== 'result') {
-                 // 這裡可以做一個簡單的錯誤處理，或者直接回首頁
                  setTimeout(() => setScreen('home'), 0);
                  return null;
             }
 
             if (screen === 'learn') {
                 return (
-                    <div className="min-h-screen bg-blue-50 flex flex-col max-w-md mx-auto shadow-xl relative">
-                        <div className="flex justify-between items-center p-4 bg-white shadow-sm">
+                    // 修改：使用 h-[100dvh] 與固定 header/footer 高度，只有中間 flex-1 區域滑動
+                    <div className="h-[100dvh] w-full bg-blue-50 flex flex-col max-w-md mx-auto shadow-xl relative overflow-hidden">
+                        {/* Header: 固定不縮放 */}
+                        <div className="shrink-0 flex justify-between items-center p-4 bg-white shadow-sm z-10">
                             <button onClick={() => setScreen('home')} className="text-gray-600 p-2"><Icon name="home" /></button>
                             <span className="text-xl font-bold text-blue-600">學習中 ({currentIndex + 1}/{activeWords.length})</span>
                             <div className="w-8"></div>
                         </div>
 
-                        <div className="flex-1 flex flex-col items-center p-4 text-center overflow-y-auto">
-                            <div className="bg-white w-full rounded-3xl shadow-lg p-6 mb-4 border-b-4 border-blue-200">
+                        {/* Content: 可滑動區域，但按鈕不包含在內 */}
+                        <div className="flex-1 flex flex-col items-center p-4 text-center overflow-y-auto scrollbar-hide">
+                            <div className="bg-white w-full rounded-3xl shadow-lg p-5 mb-4 border-b-4 border-blue-200">
                                 <h2 className="text-5xl font-bold text-slate-800 mb-2 tracking-wide">{currentWord.en}</h2>
                                 <div className="text-2xl text-orange-600 font-bold mb-4">{currentWord.zh}</div>
                                 <div className="bg-gray-100 inline-block px-4 py-2 rounded-full text-lg text-gray-600 mb-6">發音像：{currentWord.pronunciation}</div>
@@ -404,7 +415,7 @@
                                 </div>
                             </div>
 
-                            <div className="w-full bg-indigo-50 rounded-2xl p-4 border-2 border-indigo-100 mb-4">
+                            <div className="w-full bg-indigo-50 rounded-2xl p-4 border-2 border-indigo-100">
                                 <div className="text-lg font-bold text-indigo-800 mb-2">口說練習</div>
                                 <div className="flex flex-col items-center">
                                     <button 
@@ -430,7 +441,8 @@
                             </div>
                         </div>
 
-                        <div className="p-4 bg-white flex justify-between gap-4">
+                        {/* Footer Buttons: 固定在底部，不隨內容滑動 */}
+                        <div className="shrink-0 p-4 bg-white flex justify-between gap-4 border-t z-10">
                             <button onClick={prevCard} disabled={currentIndex === 0} className={`flex-1 py-4 rounded-xl text-xl font-bold ${currentIndex === 0 ? 'bg-gray-100 text-gray-300' : 'bg-gray-200 text-gray-700'}`}>上一個</button>
                             {currentIndex === activeWords.length - 1 ? (
                                 <button onClick={startQuizMode} className="flex-1 bg-orange-500 text-white py-4 rounded-xl text-xl font-bold shadow-md btn-press">開始測驗</button>
@@ -444,13 +456,14 @@
 
             if (screen === 'quiz') {
                 return (
-                    <div className="min-h-screen bg-indigo-50 flex flex-col max-w-md mx-auto shadow-xl">
-                        <div className="p-4 text-center">
+                    // 修改：使用 h-[100dvh] 確保測驗畫面也是滿版固定
+                    <div className="h-[100dvh] w-full bg-indigo-50 flex flex-col max-w-md mx-auto shadow-xl overflow-hidden">
+                        <div className="shrink-0 p-4 text-center">
                             <div className="text-2xl font-bold text-indigo-800">小測驗</div>
                             <div className="text-gray-500">選出正確的中文意思</div>
                         </div>
-                        <div className="flex-1 flex flex-col items-center p-6">
-                            <div className="bg-white w-full rounded-2xl shadow-md p-8 mb-8 text-center relative overflow-hidden">
+                        <div className="flex-1 flex flex-col items-center p-6 overflow-y-auto scrollbar-hide">
+                            <div className="bg-white w-full rounded-2xl shadow-md p-8 mb-8 text-center relative overflow-hidden shrink-0">
                                 {quizFeedback === 'correct' && (
                                     <div className="absolute inset-0 bg-green-100 flex items-center justify-center z-10"><div className="text-green-600 font-bold text-4xl flex flex-col items-center"><Icon name="check" size={64} /><div>答對了！</div></div></div>
                                 )}
@@ -460,7 +473,7 @@
                                 <div className="text-5xl font-bold text-slate-800 mb-4">{currentWord.en}</div>
                                 <button onClick={() => speak(currentWord.en)} className="text-blue-500 mx-auto block p-2"><Icon name="volume" size={32} /></button>
                             </div>
-                            <div className="w-full space-y-4">
+                            <div className="w-full space-y-4 pb-4">
                                 {quizOptions.map((option, idx) => (
                                     <button key={idx} onClick={() => handleQuizAnswer(option)} className="w-full bg-white hover:bg-indigo-100 border-2 border-indigo-100 rounded-xl p-6 text-2xl font-bold text-slate-700 shadow-sm btn-press transition-colors">{option.zh}</button>
                                 ))}
@@ -472,7 +485,7 @@
 
             if (screen === 'result') {
                 return (
-                    <div className="min-h-screen bg-yellow-50 flex flex-col items-center justify-center max-w-md mx-auto p-6 text-center">
+                    <div className="h-[100dvh] w-full bg-yellow-50 flex flex-col items-center justify-center max-w-md mx-auto p-6 text-center overflow-hidden">
                         <div className="bg-white p-8 rounded-3xl shadow-xl w-full">
                             <div className="text-yellow-500 flex justify-center mb-4"><Icon name="star" size={80} className="fill-current" /></div>
                             <h2 className="text-4xl font-bold text-slate-800 mb-4">恭喜完成！</h2>
