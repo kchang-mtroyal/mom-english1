@@ -162,16 +162,32 @@
                     const allVoices = window.speechSynthesis.getVoices();
                     // 只過濾出英語系聲音
                     const enVoices = allVoices.filter(v => v.lang.startsWith('en'));
+                    
+                    // 排序邏輯：優先顯示高品質 (Siri, Enhanced, Premium, Google, Natural)
+                    enVoices.sort((a, b) => {
+                        const isGoodA = isHighQuality(a);
+                        const isGoodB = isHighQuality(b);
+                        if (isGoodA && !isGoodB) return -1;
+                        if (!isGoodA && isGoodB) return 1;
+                        return 0;
+                    });
+
                     setAvailableVoices(enVoices);
 
-                    // 如果還沒有選擇聲音，且有可用聲音，預設選第一個
+                    // 如果還沒有選擇聲音，且有可用聲音，預設選第一個（排序後第一個應該是最好的）
                     if (enVoices.length > 0 && !selectedVoice) {
-                        // 嘗試尋找 Google US English 或 Microsoft David 等常見高品質聲音
-                        const preferred = enVoices.find(v => v.name.includes('Google US')) || 
-                                          enVoices.find(v => v.name.includes('US')) || 
-                                          enVoices[0];
-                        setSelectedVoice(preferred);
+                        setSelectedVoice(enVoices[0]);
                     }
+                };
+
+                // 判斷是否為高品質聲音的輔助函式
+                const isHighQuality = (voice) => {
+                    const name = voice.name.toLowerCase();
+                    return name.includes('siri') || 
+                           name.includes('enhanced') || 
+                           name.includes('premium') || 
+                           name.includes('google') ||
+                           name.includes('natural');
                 };
 
                 loadVoices();
@@ -574,6 +590,7 @@
                                         <ul className="list-disc pl-4 mt-1 space-y-1">
                                             <li><strong>iPhone:</strong> 請至「設定 > 輔助使用 > 語音內容」下載「Siri」或「增強」品質的聲音。</li>
                                             <li><strong>Android:</strong> 請至「設定 > 文字轉語音」更新 Google 語音服務。</li>
+                                            <li>(注意：iPhone 有時會因為系統限制，隱藏部分 Siri 聲音，但增強版聲音通常會出現)</li>
                                         </ul>
                                     </div>
 
@@ -581,21 +598,37 @@
                                         {availableVoices.length === 0 ? (
                                             <div className="text-center p-4 text-gray-500">找不到可用的英文語音</div>
                                         ) : (
-                                            availableVoices.map((voice, idx) => (
-                                                <button 
-                                                    key={idx}
-                                                    onClick={() => selectVoiceAndTest(voice)}
-                                                    className={`w-full text-left p-4 rounded-xl mb-2 flex items-center justify-between border-2 transition-all ${selectedVoice && selectedVoice.name === voice.name ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-100 hover:border-blue-200'}`}
-                                                >
-                                                    <div>
-                                                        <div className="font-bold text-lg">聲音 {idx + 1}</div>
-                                                        <div className="text-xs text-gray-400 truncate w-48">{voice.name}</div>
-                                                    </div>
-                                                    {selectedVoice && selectedVoice.name === voice.name && (
-                                                        <Icon name="check" className="text-blue-500" />
-                                                    )}
-                                                </button>
-                                            ))
+                                            availableVoices.map((voice, idx) => {
+                                                const nameLower = voice.name.toLowerCase();
+                                                const isHighQuality = nameLower.includes('siri') || 
+                                                                    nameLower.includes('enhanced') || 
+                                                                    nameLower.includes('premium') || 
+                                                                    nameLower.includes('google') ||
+                                                                    nameLower.includes('natural');
+                                                
+                                                return (
+                                                    <button 
+                                                        key={idx}
+                                                        onClick={() => selectVoiceAndTest(voice)}
+                                                        className={`w-full text-left p-4 rounded-xl mb-2 flex items-center justify-between border-2 transition-all ${selectedVoice && selectedVoice.name === voice.name ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-100 hover:border-blue-200'}`}
+                                                    >
+                                                        <div>
+                                                            <div className="font-bold text-lg flex items-center">
+                                                                聲音 {idx + 1}
+                                                                {isHighQuality && (
+                                                                    <span className="ml-2 text-xs bg-orange-100 text-orange-600 px-2 py-0.5 rounded-full border border-orange-200">
+                                                                        👍 推薦音質
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            <div className="text-xs text-gray-400 truncate w-48">{voice.name}</div>
+                                                        </div>
+                                                        {selectedVoice && selectedVoice.name === voice.name && (
+                                                            <Icon name="check" className="text-blue-500" />
+                                                        )}
+                                                    </button>
+                                                );
+                                            })
                                         )}
                                     </div>
                                     <div className="p-4 border-t">
