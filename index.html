@@ -562,6 +562,16 @@
                                             <Icon name="x" size={24} />
                                         </button>
                                     </div>
+
+                                    {/* 聲音教學提示 - 新增部分 */}
+                                    <div className="p-4 bg-blue-50 text-sm text-blue-800 rounded-lg mx-4 mt-2 mb-2">
+                                        <strong>💡 覺得聲音像機器人？</strong>
+                                        <ul className="list-disc pl-4 mt-1 space-y-1">
+                                            <li><strong>iPhone:</strong> 請至「設定 > 輔助使用 > 語音內容」下載「Siri」或「增強」品質的聲音。</li>
+                                            <li><strong>Android:</strong> 請至「設定 > 文字轉語音」更新 Google 語音服務。</li>
+                                        </ul>
+                                    </div>
+
                                     <div className="p-2 overflow-y-auto flex-1">
                                         {availableVoices.length === 0 ? (
                                             <div className="text-center p-4 text-gray-500">找不到可用的英文語音</div>
